@@ -116,7 +116,11 @@ function resolveStaticFile(urlPath) {
     .normalize(pathname)
     .replace(/^[/\\]+/, "")
     .replace(/^(\.\.[/\\])+/, "");
-  return path.join(ROOT_DIR, normalized);
+  const basePath = path.join(ROOT_DIR, normalized);
+  if (path.extname(basePath)) {
+    return basePath;
+  }
+  return `${basePath}.html`;
 }
 
 function routeStatic(req, res) {
