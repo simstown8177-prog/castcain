@@ -833,14 +833,23 @@ async function analyzeIngredient(ingredientId) {
     if (isMeaningfulValue(data.product.vendor)) {
       ingredient.vendor = data.product.vendor;
     }
+    if (isMeaningfulValue(data.product.category) && !isMeaningfulValue(ingredient.category)) {
+      ingredient.category = data.product.category;
+    }
     if (isMeaningfulValue(data.product.price)) {
       ingredient.supplyPrice = normalizePriceValue(data.product.price);
+    }
+    if (isMeaningfulValue(data.product.supplyWeight)) {
+      ingredient.supplyWeight = data.product.supplyWeight;
+    }
+    if (isMeaningfulValue(data.product.supplyUnit)) {
+      ingredient.supplyUnit = data.product.supplyUnit;
     }
     extractStatus = {
       tone: "success",
       message: `${ingredient.name || "품목"} 분석 완료 · 공급처 ${ingredient.vendor || "미확인"}${
         ingredient.supplyPrice ? ` · 가격 ${ingredient.supplyPrice}원` : ""
-      }`,
+      }${ingredient.supplyWeight ? ` · 규격 ${ingredient.supplyWeight}${ingredient.supplyUnit || ""}` : ""}`,
     };
     render();
   } catch (error) {
