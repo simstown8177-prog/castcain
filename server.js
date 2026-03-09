@@ -108,10 +108,14 @@ async function handleState(req, res) {
 }
 
 function resolveStaticFile(urlPath) {
-  if (urlPath === "/") {
+  const pathname = new URL(urlPath, "http://localhost").pathname;
+  if (pathname === "/") {
     return path.join(ROOT_DIR, "index.html");
   }
-  const normalized = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, "");
+  const normalized = path
+    .normalize(pathname)
+    .replace(/^[/\\]+/, "")
+    .replace(/^(\.\.[/\\])+/, "");
   return path.join(ROOT_DIR, normalized);
 }
 
