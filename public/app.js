@@ -2,6 +2,25 @@ const SCALE = 10000n;
 const STORAGE_KEY = "cost-dashboard-state-v1";
 const DAYS_IN_MONTH = 30n;
 
+function createDefaultStores() {
+  return [
+    {
+      id: crypto.randomUUID(),
+      name: "1호점",
+      code: "STORE-01",
+      manager: "",
+      kakaoTarget: "",
+    },
+    {
+      id: crypto.randomUUID(),
+      name: "2호점",
+      code: "STORE-02",
+      manager: "",
+      kakaoTarget: "",
+    },
+  ];
+}
+
 const defaultState = {
   ingredients: [
     {
@@ -30,6 +49,10 @@ const defaultState = {
       rows: [],
     },
   ],
+  stores: createDefaultStores(),
+  inventory: [],
+  alerts: [],
+  sales: [],
   forecast: {
     rent: "1800000",
     management: "250000",
@@ -99,6 +122,10 @@ function hydrateLocalCache() {
     return {
       ingredients: parsed.ingredients || structuredClone(defaultState.ingredients),
       menus: parsed.menus || structuredClone(defaultState.menus),
+      stores: parsed.stores || structuredClone(defaultState.stores),
+      inventory: parsed.inventory || structuredClone(defaultState.inventory),
+      alerts: parsed.alerts || structuredClone(defaultState.alerts),
+      sales: parsed.sales || structuredClone(defaultState.sales),
       forecast: { ...defaultState.forecast, ...(parsed.forecast || {}) },
     };
   } catch (error) {
@@ -116,6 +143,9 @@ function ensureSeedRows() {
   }
   if (!state.ingredients.length) {
     state.ingredients = structuredClone(defaultState.ingredients);
+  }
+  if (!state.stores.length) {
+    state.stores = createDefaultStores();
   }
   if (!state.menus[0].rows.length && state.ingredients[0]) {
     state.menus[0].rows.push({
@@ -1186,6 +1216,10 @@ async function boot() {
     state = {
       ingredients: remoteState.ingredients || structuredClone(defaultState.ingredients),
       menus: remoteState.menus || structuredClone(defaultState.menus),
+      stores: remoteState.stores || structuredClone(defaultState.stores),
+      inventory: remoteState.inventory || structuredClone(defaultState.inventory),
+      alerts: remoteState.alerts || structuredClone(defaultState.alerts),
+      sales: remoteState.sales || structuredClone(defaultState.sales),
       forecast: { ...defaultState.forecast, ...(remoteState.forecast || {}) },
     };
     activeMenuId = state.menus[0]?.id || null;

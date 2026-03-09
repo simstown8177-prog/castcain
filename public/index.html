@@ -13,9 +13,14 @@
           <p class="eyebrow">Korean Cost OS</p>
           <h1>원가 운영 대시보드</h1>
           <p class="sidebar-copy">
-            식자재 수집, 레시피 원가, 매출 예측, 영업이익을 하나의 화면에서 관리합니다.
+            식자재 마스터와 메뉴 원가를 관리하고, 매출 예상은 별도 섹션에서 확인합니다.
           </p>
         </div>
+
+        <nav class="page-switch">
+          <a class="nav-link active" href="/">원가 분석</a>
+          <a class="nav-link" href="/inventory.html">재고 관리</a>
+        </nav>
 
         <nav class="tab-list">
           <button class="tab-button active" data-tab="ingredients">
@@ -33,11 +38,6 @@
         </nav>
 
         <section class="sidebar-panel">
-          <p class="panel-label">운영 핵심 요약</p>
-          <div class="stack-grid" id="heroMetrics"></div>
-        </section>
-
-        <section class="sidebar-panel">
           <p class="panel-label">입력 가이드</p>
           <ul class="guide-list">
             <li>엑셀은 CSV로 저장 후 업로드</li>
@@ -47,42 +47,13 @@
         </section>
       </aside>
 
-      <main class="main-content">
-        <section class="topbar">
+      <main class="main-content dense">
+        <section class="page-heading">
           <div>
-            <p class="eyebrow dark">실시간 경영판</p>
-            <h2>한 눈에 보는 식자재·원가·수익 구조</h2>
-            <p class="topbar-copy" id="overviewNarrative"></p>
+            <p class="eyebrow dark">Cost Master</p>
+            <h2>식자재와 레시피 원가 관리</h2>
+            <p class="topbar-copy">공통 요약은 매출 예상 탭에서만 확인하고, 이 화면은 입력과 편집에 집중합니다.</p>
           </div>
-          <div class="topbar-actions">
-            <label class="primary-button">
-              CSV 업로드
-              <input type="file" id="csvUpload" accept=".csv" hidden />
-            </label>
-            <button id="analyzeAllButton" class="secondary-button">링크 전체 분석</button>
-          </div>
-        </section>
-
-        <section class="overview-grid" id="overviewMetrics"></section>
-        <section class="chart-grid">
-          <article class="data-card">
-            <div class="card-title-row">
-              <div>
-                <h3>핵심 비중</h3>
-                <p class="card-copy">지표를 숫자 대신 비중 막대로 확인합니다.</p>
-              </div>
-            </div>
-            <div class="bar-metric-list" id="overviewBarMetrics"></div>
-          </article>
-          <article class="data-card">
-            <div class="card-title-row">
-              <div>
-                <h3>메뉴별 월 기여이익</h3>
-                <p class="card-copy">메뉴가 몇 개일 때 어느 메뉴가 이익을 끌어주는지 바로 보입니다.</p>
-              </div>
-            </div>
-            <div class="mini-chart-list" id="menuContributionChart"></div>
-          </article>
         </section>
 
         <section class="tab-panel active" id="ingredients">
@@ -92,6 +63,11 @@
               <h3>공급 품목 DB</h3>
             </div>
             <div class="header-actions">
+              <label class="primary-button file-button">
+                CSV 업로드
+                <input type="file" id="csvUpload" accept=".csv" hidden />
+              </label>
+              <button id="analyzeAllButton" class="secondary-button">링크 전체 분석</button>
               <button id="addIngredientButton" class="secondary-button">식자재 추가</button>
             </div>
           </header>
@@ -198,6 +174,45 @@
         </section>
 
         <section class="tab-panel" id="forecast">
+          <section class="topbar">
+            <div>
+              <p class="eyebrow dark">실시간 경영판</p>
+              <h2>한 눈에 보는 식자재·원가·수익 구조</h2>
+              <p class="topbar-copy" id="overviewNarrative"></p>
+            </div>
+          </section>
+
+          <section class="overview-grid" id="overviewMetrics"></section>
+          <section class="chart-grid">
+            <article class="data-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>운영 핵심 요약</h3>
+                  <p class="card-copy">공통 요약 데이터는 매출 예상 탭에서만 노출합니다.</p>
+                </div>
+              </div>
+              <div class="stack-grid" id="heroMetrics"></div>
+            </article>
+            <article class="data-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>핵심 비중</h3>
+                  <p class="card-copy">월 매출 안에서 비용과 이익 비중을 빠르게 확인합니다.</p>
+                </div>
+              </div>
+              <div class="bar-metric-list" id="overviewBarMetrics"></div>
+            </article>
+            <article class="data-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>메뉴별 월 기여이익</h3>
+                  <p class="card-copy">어떤 메뉴가 이익을 끌어주는지 바로 보입니다.</p>
+                </div>
+              </div>
+              <div class="mini-chart-list" id="menuContributionChart"></div>
+            </article>
+          </section>
+
           <header class="section-header">
             <div>
               <p class="eyebrow dark">매출 시뮬레이션</p>

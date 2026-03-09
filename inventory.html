@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>재고 관리 프로그램</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Korean Cost OS</p>
+          <h1>재고 운영</h1>
+          <p class="sidebar-copy">매장별 재고, 판매 차감, 부족 재고 알림을 한 화면에서 관리합니다.</p>
+        </div>
+
+        <nav class="page-switch">
+          <a class="nav-link" href="/">원가 분석</a>
+          <a class="nav-link active" href="/inventory.html">재고 관리</a>
+        </nav>
+
+        <section class="sidebar-panel">
+          <p class="panel-label">운영 가이드</p>
+          <ul class="guide-list">
+            <li>매장별 담당자와 카카오 대상을 먼저 등록</li>
+            <li>판매 기록을 입력하면 레시피 기준으로 차감</li>
+            <li>안전재고 이하 품목은 부족 재고 알림으로 집계</li>
+          </ul>
+        </section>
+      </aside>
+
+      <main class="main-content dense">
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow dark">Inventory Control</p>
+            <h2>매장별 재고 관리</h2>
+            <p class="topbar-copy">샵앤샵 운영에 맞춰 공통 마스터와 매장별 재고를 분리합니다.</p>
+          </div>
+        </section>
+
+        <section class="section-grid inventory-top-grid">
+          <article class="info-card emphasis">
+            <p class="card-kicker">매장 현황</p>
+            <div class="store-card-grid" id="storeCards"></div>
+          </article>
+          <article class="info-card">
+            <p class="card-kicker">부족 재고 요약</p>
+            <div class="mini-metrics" id="lowStockMetrics"></div>
+            <div class="status-list compact-gap" id="alertList"></div>
+          </article>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>매장 설정</h3>
+                <p class="card-copy">매장 코드, 담당자, 카카오 알림 대상을 관리합니다.</p>
+              </div>
+              <div class="header-actions">
+                <button id="addStoreButton" class="secondary-button">매장 추가</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>매장명</th>
+                    <th>코드</th>
+                    <th>담당자</th>
+                    <th>카카오 알림 대상</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="storeTableBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>매장별 재고</h3>
+                <p class="card-copy">현재고, 안전재고, 권장 발주량을 매장 단위로 관리합니다.</p>
+              </div>
+              <div class="header-actions">
+                <select id="inventoryStoreSelect"></select>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>품목명</th>
+                    <th>카테고리</th>
+                    <th>현재고</th>
+                    <th>안전재고</th>
+                    <th>권장 발주량</th>
+                    <th>단위</th>
+                    <th>공급처</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryTableBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>판매 등록 및 영수증 보관</h3>
+                <p class="card-copy">영수증 업로드 파일명을 기록하고, 판매 확정 시 레시피 기준으로 재료 재고를 차감합니다.</p>
+              </div>
+            </div>
+            <div class="section-grid form-section-grid">
+              <article class="info-card">
+                <p class="card-kicker">영수증 업로드</p>
+                <label class="primary-button file-button">
+                  영수증 선택
+                  <input id="receiptUpload" type="file" accept="image/*" multiple hidden />
+                </label>
+                <div class="status-list compact-gap" id="receiptStatus"></div>
+              </article>
+              <article class="info-card">
+                <p class="card-kicker">판매 반영</p>
+                <form id="saleForm" class="form-grid">
+                  <div class="field">
+                    <label>매장</label>
+                    <select name="storeId" id="saleStoreSelect"></select>
+                  </div>
+                  <div class="field">
+                    <label>판매 메뉴</label>
+                    <select name="menuId" id="saleMenuSelect"></select>
+                  </div>
+                  <div class="field">
+                    <label>판매 수량</label>
+                    <input name="quantity" value="1" />
+                  </div>
+                  <div class="field field-span">
+                    <label>메모</label>
+                    <input name="note" placeholder="예: 배달앱 주문 묶음" />
+                  </div>
+                  <button class="primary-button compact-button" type="submit">판매 차감 적용</button>
+                </form>
+              </article>
+            </div>
+          </article>
+
+          <article class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>최근 판매 기록</h3>
+                <p class="card-copy">영수증 파일명과 함께 최근 판매 차감 이력을 확인합니다.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>시각</th>
+                    <th>매장</th>
+                    <th>메뉴</th>
+                    <th>수량</th>
+                    <th>영수증</th>
+                    <th>메모</th>
+                  </tr>
+                </thead>
+                <tbody id="salesHistoryBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <tr>
+        <td colspan="8" class="empty-cell">데이터가 없습니다.</td>
+      </tr>
+    </template>
+
+    <script src="/public/inventory.js"></script>
+  </body>
+</html>
