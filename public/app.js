@@ -50,7 +50,10 @@ const elements = {
   heroMetrics: document.getElementById("heroMetrics"),
   overviewNarrative: document.getElementById("overviewNarrative"),
   overviewMetrics: document.getElementById("overviewMetrics"),
+  overviewBarMetrics: document.getElementById("overviewBarMetrics"),
+  menuContributionChart: document.getElementById("menuContributionChart"),
   ingredientsStats: document.getElementById("ingredientsStats"),
+  extractStatus: document.getElementById("extractStatus"),
   ingredientsTableBody: document.getElementById("ingredientsTableBody"),
   csvUpload: document.getElementById("csvUpload"),
   analyzeAllButton: document.getElementById("analyzeAllButton"),
@@ -66,6 +69,13 @@ const elements = {
   forecastSummaryBar: document.getElementById("forecastSummaryBar"),
   forecastTableBody: document.getElementById("forecastTableBody"),
   forecastMetrics: document.getElementById("forecastMetrics"),
+  forecastBarMetrics: document.getElementById("forecastBarMetrics"),
+  aiHelpButton: document.getElementById("aiHelpButton"),
+  assistantPanel: document.getElementById("assistantPanel"),
+  assistantCloseButton: document.getElementById("assistantCloseButton"),
+  assistantMessages: document.getElementById("assistantMessages"),
+  assistantForm: document.getElementById("assistantForm"),
+  assistantInput: document.getElementById("assistantInput"),
   emptyStateTemplate: document.getElementById("emptyStateTemplate"),
 };
 
@@ -73,6 +83,13 @@ let state = hydrateLocalCache();
 let activeMenuId = state.menus[0]?.id || null;
 let saveTimer = null;
 let isBootstrapping = true;
+let extractStatus = { tone: "idle", message: "링크 분석 대기 중" };
+let assistantMessages = [
+  {
+    role: "bot",
+    text: "원가율, 적정 판매가, 영업이익, 손익분기에 대해 물어보면 현재 데이터 기준으로 계산해서 답합니다.",
+  },
+];
 
 function hydrateLocalCache() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -178,6 +195,11 @@ function formatCurrency(value) {
 
 function formatPercent(value) {
   return `${scaledToNumberString(value, 2)}%`;
+}
+
+function formatRatio(value, base) {
+  if (base <= 0n) return "0.00%";
+  return formatPercent(divideScaled(value, base) * 100n);
 }
 
 function multiplyScaled(a, b) {
@@ -388,6 +410,80 @@ function renderOverview() {
     .join("");
 }
 
+function clampPercentString(value) {
+  const raw = Number(scaledToNumberString(value, 2));
+  return `${Math.max(0, Math.min(100, raw))}%`;
+}
+
+function percentWidth(amount, base) {
+  if (amount <= 0n || base <= 0n) return "0%";
+  return clampPercentString(divideScaled(amount, base) * 100n);
+}
+
+function renderOverviewBars() {
+  const summary = getForecastSummary();
+  const activeMenu = getActiveMenu();
+  const menuSummary = activeMenu ? getMenuCostSummary(activeMenu) : null;
+  const base = summary.totalMonthlyRevenue > 0n ? summary.totalMonthlyRevenue : SCALE;
+  const bars = [
+    ["식자재 원가 비중", summary.totalMonthlyFoodCost, "warn", "월 매출 대비 식자재 원가"],
+    ["고정비 비중", summary.fixedCosts, "", "임대료, 관리비, 인건비 포함"],
+    ["수수료 비중", summary.platformFee + summary.cardFee, "", "플랫폼 + 카드 수수료"],
+  ];
+  if (menuSummary) {
+    bars.push(["선택 메뉴 원가율", menuSummary.costRate, "success", `${activeMenu.name} 1인분 기준`]);
+  }
+
+  elements.overviewBarMetrics.innerHTML = bars
+    .map(([label, amount, tone, caption]) => {
+      const isMenuRate = label === "선택 메뉴 원가율";
+      const width = isMenuRate ? clampPercentString(amount) : percentWidth(amount, base);
+      const shown = isMenuRate ? formatPercent(amount) : formatRatio(amount, base);
+      return `
+        <div class="bar-metric">
+          <div class="bar-metric-head">
+            <span class="metric-label">${label}</span>
+            <strong>${shown}</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill ${tone}" style="width:${width}"></div></div>
+          <span class="bar-caption">${caption}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderContributionChart() {
+  if (!state.menus.length) {
+    elements.menuContributionChart.innerHTML = '<div class="empty-cell">메뉴 데이터가 없습니다.</div>';
+    return;
+  }
+  const items = state.menus.map((menu) => {
+    const summary = getMenuCostSummary(menu);
+    const dailySalesCount = parseScaled(menu.dailySalesCount);
+    const averagePrice = parseScaled(menu.averagePrice || menu.sellingPrice);
+    const monthlyRevenue = multiplyScaled(dailySalesCount, averagePrice) * DAYS_IN_MONTH;
+    const monthlyFoodCost = multiplyScaled(summary.totalCost, dailySalesCount * DAYS_IN_MONTH);
+    const contribution = monthlyRevenue - monthlyFoodCost;
+    return { menu, contribution };
+  });
+  const max = items.reduce((current, item) => (item.contribution > current ? item.contribution : current), 0n);
+  elements.menuContributionChart.innerHTML = items
+    .map(
+      (item) => `
+        <div class="mini-chart-item">
+          <div class="mini-chart-head">
+            <span class="mini-chart-label">${escapeHtml(item.menu.name)}</span>
+            <strong>${formatCurrency(item.contribution)}</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill success" style="width:${percentWidth(item.contribution, max || SCALE)}"></div></div>
+          <span class="mini-chart-value">월 기여이익 기준 비교</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
 function renderIngredientStats() {
   const linkedCount = state.ingredients.filter((ingredient) => ingredient.link).length;
   const pricedCount = state.ingredients.filter((ingredient) => parseScaled(ingredient.supplyPrice) > 0n).length;
@@ -413,6 +509,15 @@ function renderIngredientStats() {
     `
     )
     .join("");
+
+  const toneClass =
+    extractStatus.tone === "success" ? "success" : extractStatus.tone === "error" ? "error" : "";
+  elements.extractStatus.innerHTML = `
+    <div class="status-chip">
+      <span class="status-dot ${toneClass}"></span>
+      <span>${escapeHtml(extractStatus.message)}</span>
+    </div>
+  `;
 }
 
 function renderIngredients() {
@@ -652,6 +757,46 @@ function renderForecastMetrics() {
     .join("");
 }
 
+function renderForecastBars() {
+  const summary = getForecastSummary();
+  const base = summary.totalMonthlyRevenue > 0n ? summary.totalMonthlyRevenue : SCALE;
+  const items = [
+    ["식자재 원가", summary.totalMonthlyFoodCost, "warn", "월 매출 대비"],
+    ["고정지출", summary.fixedCosts, "", "임대료/인건비/관리비"],
+    ["플랫폼 수수료", summary.platformFee, "", "플랫폼 비용"],
+    ["카드 수수료", summary.cardFee, "", "결제 비용"],
+    ["영업이익", summary.operatingProfit > 0n ? summary.operatingProfit : 0n, "success", "남는 이익"],
+  ];
+
+  elements.forecastBarMetrics.innerHTML = items
+    .map(
+      ([label, amount, tone, caption]) => `
+        <div class="bar-metric">
+          <div class="bar-metric-head">
+            <span class="metric-label">${label}</span>
+            <strong>${formatCurrency(amount)}</strong>
+          </div>
+          <div class="bar-track"><div class="bar-fill ${tone}" style="width:${percentWidth(amount, base)}"></div></div>
+          <span class="bar-caption">${caption} · ${formatRatio(amount, base)}</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderAssistantMessages() {
+  elements.assistantMessages.innerHTML = assistantMessages
+    .map(
+      (message) => `
+        <div class="assistant-bubble ${message.role}">
+          ${escapeHtml(message.text).replace(/\n/g, "<br />")}
+        </div>
+      `
+    )
+    .join("");
+  elements.assistantMessages.scrollTop = elements.assistantMessages.scrollHeight;
+}
+
 function renderForecastSummaryBar() {
   const summary = getForecastSummary();
   const avgDailyProfit =
@@ -682,6 +827,8 @@ function render(options = {}) {
   ensureSeedRows();
   renderHeroMetrics();
   renderOverview();
+  renderOverviewBars();
+  renderContributionChart();
   renderIngredientStats();
   renderIngredients();
   renderMenuSelector();
@@ -693,6 +840,8 @@ function render(options = {}) {
   renderForecastSummaryBar();
   renderForecastTable();
   renderForecastMetrics();
+  renderForecastBars();
+  renderAssistantMessages();
   if (persist) {
     scheduleSave();
   } else {
@@ -717,6 +866,8 @@ async function analyzeIngredient(ingredientId) {
   const ingredient = getIngredientById(ingredientId);
   if (!ingredient?.link) return;
   try {
+    extractStatus = { tone: "idle", message: `${ingredient.name || "선택 품목"} 링크 분석 중` };
+    render({ persist: false });
     const response = await fetch("/api/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -726,9 +877,17 @@ async function analyzeIngredient(ingredientId) {
     if (!response.ok) throw new Error(data.message || data.error);
     ingredient.name = ingredient.name || data.product.title;
     ingredient.vendor = data.product.vendor || ingredient.vendor;
-    ingredient.supplyPrice = ingredient.supplyPrice || String(data.product.price || "");
+    ingredient.supplyPrice = ingredient.supplyPrice || normalizePriceValue(data.product.price);
+    extractStatus = {
+      tone: "success",
+      message: `${ingredient.name || "품목"} 분석 완료 · 공급처 ${ingredient.vendor || "미확인"}${
+        ingredient.supplyPrice ? ` · 가격 ${ingredient.supplyPrice}` : ""
+      }`,
+    };
     render();
   } catch (error) {
+    extractStatus = { tone: "error", message: "링크 분석 실패 · 접근 제한 또는 상품 정보 부족" };
+    render({ persist: false });
     window.alert(`링크 분석 실패: ${error.message}`);
   }
 }
@@ -776,6 +935,56 @@ function parseCsv(text) {
     });
     return entry;
   });
+}
+
+function normalizePriceValue(value) {
+  return String(value ?? "")
+    .replace(/[^\d.]/g, "")
+    .trim();
+}
+
+function generateAssistantReply(question) {
+  const text = question.trim();
+  const summary = getForecastSummary();
+  const menuSummaries = state.menus.map((menu) => ({
+    menu,
+    summary: getMenuCostSummary(menu),
+  }));
+  const highestCost = menuSummaries.reduce((best, item) => {
+    if (!best || item.summary.costRate > best.summary.costRate) return item;
+    return best;
+  }, null);
+  const bestProfit = menuSummaries.reduce((best, item) => {
+    const dailySales = parseScaled(item.menu.dailySalesCount);
+    const avgPrice = parseScaled(item.menu.averagePrice || item.menu.sellingPrice);
+    const monthlyContribution = multiplyScaled(dailySales * DAYS_IN_MONTH, avgPrice - item.summary.totalCost);
+    if (!best || monthlyContribution > best.monthlyContribution) {
+      return { ...item, monthlyContribution };
+    }
+    return best;
+  }, null);
+
+  if (/(원가|원가율)/.test(text) && highestCost) {
+    return `${highestCost.menu.name}의 원가율이 ${formatPercent(highestCost.summary.costRate)}로 가장 높습니다. 총 원가는 ${formatCurrency(
+      highestCost.summary.totalCost
+    )}이며, 공급가가 높은 재료 또는 사용량이 큰 재료부터 줄이는 것이 우선입니다.`;
+  }
+  if (/(이익|수익|마진)/.test(text) && bestProfit) {
+    return `${bestProfit.menu.name}이 월 기여이익 ${formatCurrency(
+      bestProfit.monthlyContribution
+    )}로 가장 좋습니다. 전체 월 영업이익은 ${formatCurrency(summary.operatingProfit)}입니다.`;
+  }
+  if (/(손익분기|브레이크이븐|몇 개)/.test(text)) {
+    return `현재 손익분기 시점은 약 ${scaledToNumberString(summary.breakEvenDays, 1)}일입니다. 고정비를 줄이거나 평균 판매가를 높이면 더 빨라집니다.`;
+  }
+  if (/(판매가|가격)/.test(text) && highestCost) {
+    const targetRate = parseScaled(highestCost.menu.targetCostRate || "30");
+    const recommended = targetRate > 0n ? divideScaled(highestCost.summary.totalCost * 100n, targetRate) : 0n;
+    return `${highestCost.menu.name}의 목표 원가율 ${formatPercent(targetRate)} 기준 추천 판매가는 약 ${formatCurrency(recommended)}입니다.`;
+  }
+  return `현재 월 매출은 ${formatCurrency(summary.totalMonthlyRevenue)}, 월 영업이익은 ${formatCurrency(
+    summary.operatingProfit
+  )}입니다. 메뉴 원가율, 적정 판매가, 손익분기, 이익 개선 질문을 더 구체적으로 주면 바로 계산해 답합니다.`;
 }
 
 elements.tabs.forEach((tab) => {
@@ -938,6 +1147,27 @@ elements.recipeTableBody.addEventListener("click", (event) => {
 elements.forecastFields.addEventListener("change", (event) => {
   state.forecast[event.target.dataset.forecastField] = event.target.value;
   render();
+});
+
+elements.aiHelpButton.addEventListener("click", () => {
+  elements.assistantPanel.classList.add("open");
+  elements.assistantPanel.setAttribute("aria-hidden", "false");
+  render({ persist: false });
+});
+
+elements.assistantCloseButton.addEventListener("click", () => {
+  elements.assistantPanel.classList.remove("open");
+  elements.assistantPanel.setAttribute("aria-hidden", "true");
+});
+
+elements.assistantForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const question = elements.assistantInput.value.trim();
+  if (!question) return;
+  assistantMessages.push({ role: "user", text: question });
+  assistantMessages.push({ role: "bot", text: generateAssistantReply(question) });
+  elements.assistantInput.value = "";
+  render({ persist: false });
 });
 
 async function boot() {
