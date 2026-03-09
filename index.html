@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>원가 분석 프로그램</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Korean Cost OS</p>
+          <h1>원가 운영 대시보드</h1>
+          <p class="sidebar-copy">
+            식자재 수집, 레시피 원가, 매출 예측, 영업이익을 하나의 화면에서 관리합니다.
+          </p>
+        </div>
+
+        <nav class="tab-list">
+          <button class="tab-button active" data-tab="ingredients">
+            <span class="tab-index">01</span>
+            <span>식자재 정보</span>
+          </button>
+          <button class="tab-button" data-tab="costing">
+            <span class="tab-index">02</span>
+            <span>원가계산</span>
+          </button>
+          <button class="tab-button" data-tab="forecast">
+            <span class="tab-index">03</span>
+            <span>매출 예상</span>
+          </button>
+        </nav>
+
+        <section class="sidebar-panel">
+          <p class="panel-label">운영 핵심 요약</p>
+          <div class="stack-grid" id="heroMetrics"></div>
+        </section>
+
+        <section class="sidebar-panel">
+          <p class="panel-label">입력 가이드</p>
+          <ul class="guide-list">
+            <li>엑셀은 CSV로 저장 후 업로드</li>
+            <li>공급 링크 저장 후 페이지 정보 자동 수집</li>
+            <li>메뉴 구성 변경 시 원가와 이익 즉시 재계산</li>
+          </ul>
+        </section>
+      </aside>
+
+      <main class="main-content">
+        <section class="topbar">
+          <div>
+            <p class="eyebrow dark">실시간 경영판</p>
+            <h2>한 눈에 보는 식자재·원가·수익 구조</h2>
+            <p class="topbar-copy" id="overviewNarrative"></p>
+          </div>
+          <div class="topbar-actions">
+            <label class="primary-button">
+              CSV 업로드
+              <input type="file" id="csvUpload" accept=".csv" hidden />
+            </label>
+            <button id="analyzeAllButton" class="secondary-button">링크 전체 분석</button>
+          </div>
+        </section>
+
+        <section class="overview-grid" id="overviewMetrics"></section>
+
+        <section class="tab-panel active" id="ingredients">
+          <header class="section-header">
+            <div>
+              <p class="eyebrow dark">식자재 관리</p>
+              <h3>공급 품목 DB</h3>
+            </div>
+            <div class="header-actions">
+              <button id="addIngredientButton" class="secondary-button">식자재 추가</button>
+            </div>
+          </header>
+
+          <section class="section-grid">
+            <article class="info-card emphasis">
+              <p class="card-kicker">자동 수집 상태</p>
+              <div class="mini-metrics" id="ingredientsStats"></div>
+            </article>
+            <article class="info-card">
+              <p class="card-kicker">업로드 기준</p>
+              <p class="card-copy">
+                권장 컬럼: `name,link,category,supplyWeight,supplyUnit,supplyPrice,vatRate,vendor,prepMethod,measureMethod`
+              </p>
+              <p class="sub-copy">링크가 들어가면 공급 페이지 메타데이터를 읽어 품목명, 공급처, 가격 정보를 보강합니다.</p>
+            </article>
+          </section>
+
+          <section class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>식자재 마스터</h3>
+                <p class="card-copy">공급 링크와 기준 중량, 공급가, 전처리 방식을 저장하는 기본 데이터베이스입니다.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>품목명</th>
+                    <th>카테고리</th>
+                    <th>공급 링크</th>
+                    <th>중량</th>
+                    <th>단위</th>
+                    <th>공급가</th>
+                    <th>부가세%</th>
+                    <th>공급처</th>
+                    <th>전처리</th>
+                    <th>계량</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="ingredientsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="costing">
+          <header class="section-header">
+            <div>
+              <p class="eyebrow dark">메뉴 원가</p>
+              <h3>레시피 원가계산</h3>
+            </div>
+            <div class="header-actions">
+              <select id="menuSelect"></select>
+              <button id="addMenuButton" class="secondary-button">메뉴 추가</button>
+              <button id="addRecipeRowButton" class="secondary-button">구성 추가</button>
+            </div>
+          </header>
+
+          <section class="section-grid">
+            <article class="info-card emphasis">
+              <p class="card-kicker">선택 메뉴 요약</p>
+              <div class="mini-metrics large" id="costingTopMetrics"></div>
+            </article>
+            <article class="info-card">
+              <p class="card-kicker">메뉴 기본값</p>
+              <div class="form-grid" id="menuMetaFields"></div>
+            </article>
+          </section>
+
+          <section class="data-card">
+            <div class="card-title-row">
+              <div>
+                <h3>원가 상세표</h3>
+                <p class="card-copy">등록된 식자재를 기준으로 메뉴 구성을 바꾸면 사용 중량, 금액, 원가 비중이 즉시 반영됩니다.</p>
+              </div>
+            </div>
+            <div class="summary-strip" id="menuMetrics"></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>식자재</th>
+                    <th>중량</th>
+                    <th>단위</th>
+                    <th>단가(세전)</th>
+                    <th>부가세</th>
+                    <th>사용 중량</th>
+                    <th>사용 단위</th>
+                    <th>금액</th>
+                    <th>원가 비중</th>
+                    <th>전처리방법</th>
+                    <th>계량방법</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="recipeTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel" id="forecast">
+          <header class="section-header">
+            <div>
+              <p class="eyebrow dark">매출 시뮬레이션</p>
+              <h3>매출 예상 및 손익 대시보드</h3>
+            </div>
+          </header>
+
+          <section class="section-grid">
+            <article class="info-card emphasis">
+              <p class="card-kicker">경영 요약</p>
+              <div class="mini-metrics large" id="forecastSummaryBar"></div>
+            </article>
+            <article class="info-card">
+              <p class="card-kicker">고정비 및 수수료</p>
+              <div class="form-grid" id="forecastFields"></div>
+            </article>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="data-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>영업이익 지표</h3>
+                  <p class="card-copy">매출, 원가, 고정비, 감가상각, 플랫폼 수수료를 한 번에 확인합니다.</p>
+                </div>
+              </div>
+              <div class="overview-grid compact-grid" id="forecastMetrics"></div>
+            </article>
+
+            <article class="data-card">
+              <div class="card-title-row">
+                <div>
+                  <h3>메뉴별 판매 예상</h3>
+                  <p class="card-copy">판매량과 평균 가격을 넣으면 메뉴별 일/월 단위 기여이익을 계산합니다.</p>
+                </div>
+              </div>
+              <div class="table-wrap compact">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>메뉴</th>
+                      <th>일 판매량</th>
+                      <th>평균 가격</th>
+                      <th>일 매출</th>
+                      <th>월 매출</th>
+                      <th>월 원가</th>
+                      <th>월 기여이익</th>
+                    </tr>
+                  </thead>
+                  <tbody id="forecastTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <template id="emptyStateTemplate">
+      <tr>
+        <td colspan="12" class="empty-cell">데이터가 없습니다.</td>
+      </tr>
+    </template>
+
+    <script src="/public/app.js"></script>
+  </body>
+</html>

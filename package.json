@@ -1,0 +1,12 @@
+{
+  "name": "castlast2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cost analysis dashboard for ingredient sourcing, recipe costing, and sales forecast",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.3.1"
+  }
+}
