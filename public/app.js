@@ -67,10 +67,8 @@ const defaultState = {
 const elements = {
   tabs: document.querySelectorAll(".tab-button"),
   panels: document.querySelectorAll(".tab-panel"),
-  heroMetrics: document.getElementById("heroMetrics"),
   overviewNarrative: document.getElementById("overviewNarrative"),
   overviewMetrics: document.getElementById("overviewMetrics"),
-  overviewBarMetrics: document.getElementById("overviewBarMetrics"),
   menuContributionChart: document.getElementById("menuContributionChart"),
   ingredientsStats: document.getElementById("ingredientsStats"),
   extractStatus: document.getElementById("extractStatus"),
@@ -355,41 +353,17 @@ function getForecastSummary() {
   };
 }
 
-function renderHeroMetrics() {
-  const activeMenu = getActiveMenu();
-  const costSummary = activeMenu ? getMenuCostSummary(activeMenu) : null;
-  const forecastSummary = getForecastSummary();
-  const metrics = [
-    ["등록 식자재", `${state.ingredients.length}개`, "공급 기준 DB"],
-    ["선택 메뉴 원가", costSummary ? formatCurrency(costSummary.totalCost) : "0원", "1인분 기준"],
-    ["선택 메뉴 원가율", costSummary ? formatPercent(costSummary.costRate) : "0.00%", "판매가 대비"],
-    ["월 영업이익", formatCurrency(forecastSummary.operatingProfit), "예상 손익"],
-  ];
-  elements.heroMetrics.innerHTML = metrics
-    .map(
-      ([label, value, note]) => `
-      <div class="metric">
-        <span class="metric-label">${label}</span>
-        <span class="metric-value">${value}</span>
-        <span class="metric-note">${note}</span>
-      </div>
-    `
-    )
-    .join("");
-}
-
 function renderOverview() {
   const activeMenu = getActiveMenu();
   const menuSummary = activeMenu ? getMenuCostSummary(activeMenu) : null;
   const forecastSummary = getForecastSummary();
-  const linkedCount = state.ingredients.filter((ingredient) => ingredient.link).length;
   const averageMenuPrice =
     state.menus.length === 0
       ? 0n
       : state.menus.reduce((sum, menu) => sum + parseScaled(menu.averagePrice || menu.sellingPrice), 0n) / BigInt(state.menus.length);
 
   elements.overviewNarrative.textContent = activeMenu
-    ? `${activeMenu.name} 기준 원가율은 ${formatPercent(menuSummary.costRate)}이며, 현재 월 영업이익 예상은 ${formatCurrency(
+    ? `${escapeHtml(activeMenu.name)} 원가율은 ${formatPercent(menuSummary.costRate)}이고, 현재 월 영업이익 예상은 ${formatCurrency(
         forecastSummary.operatingProfit
       )}입니다.`
     : `식자재를 등록하면 메뉴 원가와 매출 예측이 자동 계산됩니다.`;
@@ -399,7 +373,7 @@ function renderOverview() {
       tone: "primary",
       title: "월 예상 매출",
       value: formatCurrency(forecastSummary.totalMonthlyRevenue),
-      foot: "메뉴별 일 판매량 x 평균가격 x 30일",
+      foot: "일 판매량 x 평균 가격 x 30일",
     },
     {
       tone: "success",
@@ -409,15 +383,11 @@ function renderOverview() {
     },
     {
       tone: "warning",
-      title: "선택 메뉴 원가율",
-      value: menuSummary ? formatPercent(menuSummary.costRate) : "0.00%",
-      foot: activeMenu ? `${activeMenu.name} 기준` : "선택 메뉴 없음",
-    },
-    {
-      tone: "",
-      title: "평균 판매가",
-      value: formatCurrency(averageMenuPrice),
-      foot: `링크 등록 ${linkedCount}건 / 전체 식자재 ${state.ingredients.length}건`,
+      title: "손익분기 예상",
+      value: `${scaledToNumberString(forecastSummary.breakEvenDays, 1)}일`,
+      foot: menuSummary
+        ? `${activeMenu.name} 원가율 ${formatPercent(menuSummary.costRate)}`
+        : `평균 판매가 ${formatCurrency(averageMenuPrice)}`,
     },
   ];
 
@@ -444,39 +414,6 @@ function percentWidth(amount, base) {
   return clampPercentString(divideScaled(amount, base) * 100n);
 }
 
-function renderOverviewBars() {
-  const summary = getForecastSummary();
-  const activeMenu = getActiveMenu();
-  const menuSummary = activeMenu ? getMenuCostSummary(activeMenu) : null;
-  const base = summary.totalMonthlyRevenue > 0n ? summary.totalMonthlyRevenue : SCALE;
-  const bars = [
-    ["식자재 원가 비중", summary.totalMonthlyFoodCost, "warn", "월 매출 대비 식자재 원가"],
-    ["고정비 비중", summary.fixedCosts, "", "임대료, 관리비, 인건비 포함"],
-    ["수수료 비중", summary.platformFee + summary.cardFee, "", "플랫폼 + 카드 수수료"],
-  ];
-  if (menuSummary) {
-    bars.push(["선택 메뉴 원가율", menuSummary.costRate, "success", `${activeMenu.name} 1인분 기준`]);
-  }
-
-  elements.overviewBarMetrics.innerHTML = bars
-    .map(([label, amount, tone, caption]) => {
-      const isMenuRate = label === "선택 메뉴 원가율";
-      const width = isMenuRate ? clampPercentString(amount) : percentWidth(amount, base);
-      const shown = isMenuRate ? formatPercent(amount) : formatRatio(amount, base);
-      return `
-        <div class="bar-metric">
-          <div class="bar-metric-head">
-            <span class="metric-label">${label}</span>
-            <strong>${shown}</strong>
-          </div>
-          <div class="bar-track"><div class="bar-fill ${tone}" style="width:${width}"></div></div>
-          <span class="bar-caption">${caption}</span>
-        </div>
-      `;
-    })
-    .join("");
-}
-
 function renderContributionChart() {
   if (!state.menus.length) {
     elements.menuContributionChart.innerHTML = '<div class="empty-cell">메뉴 데이터가 없습니다.</div>';
@@ -493,6 +430,8 @@ function renderContributionChart() {
   });
   const max = items.reduce((current, item) => (item.contribution > current ? item.contribution : current), 0n);
   elements.menuContributionChart.innerHTML = items
+    .sort((a, b) => (a.contribution === b.contribution ? 0 : a.contribution > b.contribution ? -1 : 1))
+    .slice(0, 4)
     .map(
       (item) => `
         <div class="mini-chart-item">
@@ -757,16 +696,11 @@ function renderForecastTable() {
 function renderForecastMetrics() {
   const summary = getForecastSummary();
   const metrics = [
-    ["일 매출 합계", formatCurrency(summary.totalRevenue)],
-    ["월 매출 합계", formatCurrency(summary.totalMonthlyRevenue)],
     ["월 식자재 원가", formatCurrency(summary.totalMonthlyFoodCost)],
-    ["월 고정지출", formatCurrency(summary.fixedCosts)],
-    ["월 감가상각비", formatCurrency(summary.depreciation)],
-    ["플랫폼 수수료", formatCurrency(summary.platformFee)],
-    ["카드 수수료", formatCurrency(summary.cardFee)],
-    ["영업이익", formatCurrency(summary.operatingProfit)],
+    ["월 고정지출", formatCurrency(summary.fixedCosts + summary.depreciation)],
+    ["월 결제 수수료", formatCurrency(summary.platformFee + summary.cardFee)],
     ["영업이익률", formatPercent(summary.operatingMargin)],
-    ["손익분기 일수", `${scaledToNumberString(summary.breakEvenDays, 1)}일`],
+    ["하루 평균 이익", formatCurrency(divideScaled(summary.operatingProfit, DAYS_IN_MONTH))],
   ];
 
   elements.forecastMetrics.innerHTML = metrics
@@ -786,9 +720,8 @@ function renderForecastBars() {
   const base = summary.totalMonthlyRevenue > 0n ? summary.totalMonthlyRevenue : SCALE;
   const items = [
     ["식자재 원가", summary.totalMonthlyFoodCost, "warn", "월 매출 대비"],
-    ["고정지출", summary.fixedCosts, "", "임대료/인건비/관리비"],
-    ["플랫폼 수수료", summary.platformFee, "", "플랫폼 비용"],
-    ["카드 수수료", summary.cardFee, "", "결제 비용"],
+    ["고정지출", summary.fixedCosts + summary.depreciation, "", "임대료/인건비/감가상각 포함"],
+    ["결제 수수료", summary.platformFee + summary.cardFee, "", "플랫폼 + 카드"],
     ["영업이익", summary.operatingProfit > 0n ? summary.operatingProfit : 0n, "success", "남는 이익"],
   ];
 
@@ -823,15 +756,12 @@ function renderAssistantMessages() {
 
 function renderForecastSummaryBar() {
   const summary = getForecastSummary();
-  const avgDailyProfit =
-    DAYS_IN_MONTH === 0n ? 0n : divideScaled(summary.operatingProfit, DAYS_IN_MONTH);
   const metrics = [
     ["일 매출", formatCurrency(summary.totalRevenue)],
+    ["월 매출", formatCurrency(summary.totalMonthlyRevenue)],
     ["월 영업이익", formatCurrency(summary.operatingProfit)],
-    ["일 평균 이익", formatCurrency(avgDailyProfit)],
+    ["일 평균 이익", formatCurrency(divideScaled(summary.operatingProfit, DAYS_IN_MONTH))],
     ["손익분기", `${scaledToNumberString(summary.breakEvenDays, 1)}일`],
-    ["플랫폼 수수료", formatCurrency(summary.platformFee)],
-    ["카드 수수료", formatCurrency(summary.cardFee)],
   ];
 
   elements.forecastSummaryBar.innerHTML = metrics
@@ -849,9 +779,7 @@ function renderForecastSummaryBar() {
 function render(options = {}) {
   const { persist = true } = options;
   ensureSeedRows();
-  renderHeroMetrics();
   renderOverview();
-  renderOverviewBars();
   renderContributionChart();
   renderIngredientStats();
   renderIngredients();

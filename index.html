@@ -172,69 +172,45 @@
         </section>
 
         <section class="tab-panel" id="forecast">
-          <section class="topbar">
+          <section class="topbar forecast-hero">
             <div>
               <p class="eyebrow dark">실시간 경영판</p>
-              <h2>한 눈에 보는 식자재·원가·수익 구조</h2>
+              <h2>매출 예상은 핵심 숫자만 빠르게 확인</h2>
               <p class="topbar-copy" id="overviewNarrative"></p>
             </div>
           </section>
 
-          <section class="overview-grid" id="overviewMetrics"></section>
-          <section class="chart-grid">
-            <article class="data-card">
+          <section class="overview-grid forecast-overview" id="overviewMetrics"></section>
+
+          <section class="forecast-focus-grid">
+            <article class="data-card forecast-input-card">
               <div class="card-title-row">
                 <div>
-                  <h3>운영 핵심 요약</h3>
-                  <p class="card-copy">공통 요약 데이터는 매출 예상 탭에서만 노출합니다.</p>
+                  <h3>입력 항목</h3>
+                  <p class="card-copy">고정비와 수수료만 입력하면 월 손익이 바로 반영됩니다.</p>
                 </div>
               </div>
-              <div class="stack-grid" id="heroMetrics"></div>
+              <div class="form-grid forecast-form-grid" id="forecastFields"></div>
             </article>
-            <article class="data-card">
+
+            <article class="data-card forecast-summary-card">
               <div class="card-title-row">
                 <div>
-                  <h3>핵심 비중</h3>
-                  <p class="card-copy">월 매출 안에서 비용과 이익 비중을 빠르게 확인합니다.</p>
+                  <h3>이번 달 스냅샷</h3>
+                  <p class="card-copy">지금 기준으로 가장 먼저 볼 숫자들만 모았습니다.</p>
                 </div>
               </div>
-              <div class="bar-metric-list" id="overviewBarMetrics"></div>
-            </article>
-            <article class="data-card">
-              <div class="card-title-row">
-                <div>
-                  <h3>메뉴별 월 기여이익</h3>
-                  <p class="card-copy">어떤 메뉴가 이익을 끌어주는지 바로 보입니다.</p>
-                </div>
-              </div>
-              <div class="mini-chart-list" id="menuContributionChart"></div>
+              <div class="mini-metrics large forecast-summary-bar" id="forecastSummaryBar"></div>
+              <div class="bar-metric-list compact-gap" id="forecastBarMetrics"></div>
             </article>
           </section>
 
-          <header class="section-header">
-            <div>
-              <p class="eyebrow dark">매출 시뮬레이션</p>
-              <h3>매출 예상 및 손익 대시보드</h3>
-            </div>
-          </header>
-
-          <section class="section-grid">
-            <article class="info-card emphasis">
-              <p class="card-kicker">경영 요약</p>
-              <div class="mini-metrics large" id="forecastSummaryBar"></div>
-            </article>
-            <article class="info-card">
-              <p class="card-kicker">고정비 및 수수료</p>
-              <div class="form-grid" id="forecastFields"></div>
-            </article>
-          </section>
-
-          <section class="dashboard-grid">
+          <section class="forecast-results-grid">
             <article class="data-card">
               <div class="card-title-row">
                 <div>
-                  <h3>영업이익 지표</h3>
-                  <p class="card-copy">매출, 원가, 고정비, 감가상각, 플랫폼 수수료를 한 번에 확인합니다.</p>
+                  <h3>핵심 결과</h3>
+                  <p class="card-copy">복잡한 항목 대신 판단에 필요한 결과만 보여줍니다.</p>
                 </div>
               </div>
               <div class="overview-grid compact-grid" id="forecastMetrics"></div>
@@ -243,18 +219,20 @@
             <article class="data-card">
               <div class="card-title-row">
                 <div>
-                  <h3>비용 구조 그래프</h3>
-                  <p class="card-copy">월 매출 안에서 원가, 고정비, 수수료가 차지하는 비중을 시각적으로 확인합니다.</p>
+                  <h3>메뉴별 월 기여이익</h3>
+                  <p class="card-copy">어떤 메뉴가 월 수익을 끌어주는지 바로 보입니다.</p>
                 </div>
               </div>
-              <div class="bar-metric-list" id="forecastBarMetrics"></div>
+              <div class="mini-chart-list" id="menuContributionChart"></div>
             </article>
+          </section>
 
+          <section class="dashboard-grid">
             <article class="data-card">
               <div class="card-title-row">
                 <div>
                   <h3>메뉴별 판매 예상</h3>
-                  <p class="card-copy">판매량과 평균 가격을 넣으면 메뉴별 일/월 단위 기여이익을 계산합니다.</p>
+                  <p class="card-copy">메뉴별 일 판매량과 평균 가격을 기준으로 월 기여이익을 계산합니다.</p>
                 </div>
               </div>
               <div class="table-wrap compact">

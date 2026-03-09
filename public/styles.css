@@ -1,18 +1,18 @@
 :root {
-  --bg: #f4f7fb;
+  --bg: #eff3f8;
   --surface: #ffffff;
-  --surface-soft: #f7f9fc;
+  --surface-soft: #f5f7fb;
   --surface-strong: #0f172a;
   --text: #0f172a;
   --muted: #64748b;
   --line: #dbe3ee;
   --blue: #2563eb;
-  --blue-soft: #e9f1ff;
+  --blue-soft: #eaf1ff;
   --green: #0f9f6e;
   --red: #dc2626;
   --amber: #d97706;
-  --shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
-  --radius: 16px;
+  --shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  --radius: 20px;
 }
 
 * {
@@ -24,8 +24,8 @@ body {
   font-family: "Pretendard", "Noto Sans KR", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 26%),
-    linear-gradient(180deg, #f8fbff 0%, #f3f7fb 100%);
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 24%),
+    linear-gradient(180deg, #f6f9fc 0%, #eef3f7 100%);
 }
 
 button,
@@ -53,7 +53,7 @@ ul {
 }
 
 .sidebar {
-  padding: 20px 16px;
+  padding: 22px 16px;
   border-right: 1px solid rgba(219, 227, 238, 0.8);
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
@@ -173,18 +173,22 @@ ul {
 }
 
 .main-content {
-  padding: 16px;
+  padding: 22px;
 }
 
 .main-content.dense {
-  padding: 16px;
+  padding: 22px;
 }
 
 .page-heading {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 4px 4px;
+  padding: 18px 20px;
+  border: 1px solid rgba(219, 227, 238, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
 }
 
 .page-heading h2 {
@@ -204,6 +208,10 @@ ul {
     linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
   color: #f8fbff;
   box-shadow: var(--shadow);
+}
+
+.forecast-hero {
+  margin-top: 0;
 }
 
 .topbar h2 {
@@ -253,14 +261,19 @@ select {
 .stack-grid,
 .summary-strip,
 .form-grid,
-.dashboard-grid {
+.dashboard-grid,
+.forecast-focus-grid,
+.forecast-results-grid {
   display: grid;
   gap: 12px;
 }
 
 .overview-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 12px;
+}
+
+.forecast-overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .section-grid {
@@ -275,12 +288,19 @@ select {
 
 .dashboard-grid {
   grid-template-columns: 1fr;
-  margin-top: 12px;
+}
+
+.forecast-focus-grid {
+  grid-template-columns: 1.05fr 0.95fr;
+}
+
+.forecast-results-grid {
+  grid-template-columns: 0.95fr 1.05fr;
 }
 
 .compact-grid {
   margin-top: 0;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .tab-panel {
@@ -290,7 +310,9 @@ select {
 }
 
 .tab-panel.active {
-  display: block;
+  display: grid;
+  gap: 16px;
+  align-content: start;
 }
 
 .section-header,
@@ -318,8 +340,8 @@ select {
 }
 
 .overview-card {
-  padding: 16px;
-  min-height: 112px;
+  padding: 18px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -355,7 +377,7 @@ select {
 
 .info-card,
 .data-card {
-  padding: 16px;
+  padding: 18px;
 }
 
 .info-card.emphasis {
@@ -367,14 +389,14 @@ select {
 }
 
 .mini-metrics.large {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .metric,
 .strip-item {
   padding: 11px 12px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface-soft);
 }
 
@@ -416,6 +438,18 @@ select {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
+.forecast-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.forecast-summary-card .bar-metric-list {
+  margin-top: 4px;
+}
+
+.forecast-summary-bar .metric {
+  background: #fff;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -430,8 +464,8 @@ select {
 td input,
 td select {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--text);
@@ -439,6 +473,7 @@ td select {
 
 .table-wrap {
   overflow: auto;
+  margin-top: 8px;
 }
 
 .status-list,
@@ -524,7 +559,7 @@ td select {
   gap: 8px;
   padding: 12px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--surface-soft);
 }
 
@@ -701,7 +736,9 @@ th {
   .overview-grid,
   .compact-grid,
   .summary-strip,
-  .chart-grid {
+  .chart-grid,
+  .forecast-focus-grid,
+  .forecast-results-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -747,7 +784,10 @@ th {
   .mini-metrics,
   .compact-grid,
   .summary-strip,
-  .chart-grid {
+  .chart-grid,
+  .forecast-focus-grid,
+  .forecast-results-grid,
+  .forecast-form-grid {
     grid-template-columns: 1fr;
   }
 
