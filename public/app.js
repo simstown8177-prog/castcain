@@ -853,9 +853,17 @@ async function analyzeIngredient(ingredientId) {
     };
     render();
   } catch (error) {
-    extractStatus = { tone: "error", message: "링크 분석 실패 · 접근 제한 또는 상품 정보 부족" };
+    const blocked = /429|403/.test(String(error.message || ""));
+    extractStatus = {
+      tone: "error",
+      message: blocked ? "링크 분석 실패 · 사이트 요청 제한 또는 차단" : "링크 분석 실패 · 접근 제한 또는 상품 정보 부족",
+    };
     render({ persist: false });
-    window.alert(`링크 분석 실패: ${error.message}`);
+    window.alert(
+      blocked
+        ? `링크 분석 실패: 현재 해당 사이트가 자동 요청을 제한하고 있습니다.`
+        : `링크 분석 실패: ${error.message}`
+    );
   }
 }
 
