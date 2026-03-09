@@ -95,6 +95,9 @@ const elements = {
   saleMenuSelect: document.getElementById("saleMenuSelect"),
   salesHistoryBody: document.getElementById("salesHistoryBody"),
   lowStockMetrics: document.getElementById("lowStockMetrics"),
+  receiptDraftTableBody: document.getElementById("receiptDraftTableBody"),
+  applyReceiptDraftsButton: document.getElementById("applyReceiptDraftsButton"),
+  kakaoPreviewList: document.getElementById("kakaoPreviewList"),
   emptyStateTemplate: document.getElementById("emptyStateTemplate"),
 };
 
@@ -103,6 +106,7 @@ let activeStoreId = state.stores[0]?.id || null;
 let saveTimer = null;
 let isBootstrapping = true;
 let stagedReceiptNames = [];
+let receiptDrafts = [];
 
 function hydrateLocalCache() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -201,6 +205,17 @@ function getMenuById(id) {
 
 function getStoreById(id) {
   return state.stores.find((store) => store.id === id);
+}
+
+function inferMenuIdFromReceiptName(fileName) {
+  const normalized = String(fileName || "").replace(/\s/g, "").toLowerCase();
+  const matchedMenu = state.menus.find((menu) => normalized.includes(menu.name.replace(/\s/g, "").toLowerCase()));
+  return matchedMenu?.id || state.menus[0]?.id || "";
+}
+
+function inferQuantityFromReceiptName(fileName) {
+  const match = String(fileName || "").match(/(\d+)(?!.*\d)/);
+  return match ? match[1] : "1";
 }
 
 function ensureSeeds() {
@@ -457,6 +472,72 @@ function renderReceiptStatus() {
     .join("");
 }
 
+function renderReceiptDrafts() {
+  if (!receiptDrafts.length) {
+    elements.receiptDraftTableBody.innerHTML = elements.emptyStateTemplate.innerHTML;
+    return;
+  }
+
+  elements.receiptDraftTableBody.innerHTML = receiptDrafts
+    .map((draft) => {
+      const storeOptions = state.stores
+        .map(
+          (store) => `<option value="${store.id}" ${store.id === draft.storeId ? "selected" : ""}>${escapeHtml(store.name)}</option>`
+        )
+        .join("");
+      const menuOptions = state.menus
+        .map((menu) => `<option value="${menu.id}" ${menu.id === draft.menuId ? "selected" : ""}>${escapeHtml(menu.name)}</option>`)
+        .join("");
+
+      return `
+        <tr data-draft-id="${draft.id}">
+          <td>${escapeHtml(draft.fileName)}</td>
+          <td><select data-field="storeId">${storeOptions}</select></td>
+          <td><select data-field="menuId">${menuOptions}</select></td>
+          <td><input data-field="quantity" value="${escapeHtml(draft.quantity)}" /></td>
+          <td>${escapeHtml(draft.status)}</td>
+          <td><button class="action-link" data-action="delete">제외</button></td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function buildKakaoAlertMessage(alert) {
+  const record = alert.inventoryRecord;
+  const unit = alert.ingredient.supplyUnit || "g";
+  return [
+    `[재고부족] ${alert.store.name}`,
+    `품목: ${alert.ingredient.name}`,
+    `현재고: ${scaledToNumberString(parseScaled(record?.currentQuantity || "0"), 1)}${unit}`,
+    `안전재고: ${record?.safetyStock || "0"}${unit}`,
+    `권장발주: ${record?.reorderQuantity || "0"}${unit}`,
+    `담당자: ${alert.store.manager || "미등록"}`,
+  ].join("\n");
+}
+
+function renderKakaoPreviewList() {
+  const alerts = getOpenAlerts();
+  if (!alerts.length) {
+    elements.kakaoPreviewList.innerHTML = '<div class="empty-cell">전송할 카카오 알림이 없습니다.</div>';
+    return;
+  }
+
+  elements.kakaoPreviewList.innerHTML = alerts
+    .map(
+      (alert) => `
+        <div class="message-preview">
+          <div class="mini-chart-head">
+            <span class="mini-chart-label">${escapeHtml(alert.store.name)} · ${escapeHtml(alert.ingredient.name)}</span>
+            <strong>${escapeHtml(alert.store.kakaoTarget || "대상 미등록")}</strong>
+          </div>
+          <pre>${escapeHtml(buildKakaoAlertMessage(alert))}</pre>
+        </div>
+      `
+    )
+    .join("");
+}
+
 function renderSalesHistory() {
   if (!state.sales.length) {
     elements.salesHistoryBody.innerHTML = elements.emptyStateTemplate.innerHTML;
@@ -492,7 +573,9 @@ function render() {
   renderAlertList();
   renderMenuOptions();
   renderReceiptStatus();
+  renderReceiptDrafts();
   renderSalesHistory();
+  renderKakaoPreviewList();
   scheduleSave();
 }
 
@@ -531,6 +614,17 @@ function applySale(storeId, menuId, quantity, note, receiptNames) {
   });
 
   syncLowStockAlerts();
+  render();
+}
+
+function applyReceiptDrafts() {
+  if (!receiptDrafts.length) return;
+  receiptDrafts.forEach((draft) => {
+    if (!draft.menuId || parseScaled(draft.quantity) <= 0n) return;
+    applySale(draft.storeId, draft.menuId, draft.quantity, "영수증 OCR 검수 반영", [draft.fileName]);
+  });
+  receiptDrafts = [];
+  stagedReceiptNames = [];
   render();
 }
 
@@ -589,7 +683,16 @@ elements.addStoreButton.addEventListener("click", () => {
 
 elements.receiptUpload.addEventListener("change", (event) => {
   stagedReceiptNames = Array.from(event.target.files || []).map((file) => file.name);
+  receiptDrafts = stagedReceiptNames.map((fileName) => ({
+    id: crypto.randomUUID(),
+    fileName,
+    storeId: activeStoreId,
+    menuId: inferMenuIdFromReceiptName(fileName),
+    quantity: inferQuantityFromReceiptName(fileName),
+    status: "검수 대기",
+  }));
   renderReceiptStatus();
+  renderReceiptDrafts();
 });
 
 elements.saleForm.addEventListener("submit", (event) => {
@@ -604,6 +707,29 @@ elements.saleForm.addEventListener("submit", (event) => {
   event.currentTarget.reset();
   elements.saleStoreSelect.value = activeStoreId;
   renderReceiptStatus();
+});
+
+elements.receiptDraftTableBody.addEventListener("change", (event) => {
+  const row = event.target.closest("tr[data-draft-id]");
+  if (!row) return;
+  const draft = receiptDrafts.find((item) => item.id === row.dataset.draftId);
+  if (!draft) return;
+  draft[event.target.dataset.field] = event.target.value;
+  draft.status = "검수 완료";
+  renderReceiptDrafts();
+});
+
+elements.receiptDraftTableBody.addEventListener("click", (event) => {
+  if (event.target.dataset.action !== "delete") return;
+  const row = event.target.closest("tr[data-draft-id]");
+  if (!row) return;
+  receiptDrafts = receiptDrafts.filter((item) => item.id !== row.dataset.draftId);
+  stagedReceiptNames = receiptDrafts.map((item) => item.fileName);
+  render();
+});
+
+elements.applyReceiptDraftsButton.addEventListener("click", () => {
+  applyReceiptDrafts();
 });
 
 async function boot() {
