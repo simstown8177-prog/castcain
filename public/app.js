@@ -875,13 +875,19 @@ async function analyzeIngredient(ingredientId) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || data.error);
-    ingredient.name = ingredient.name || data.product.title;
-    ingredient.vendor = data.product.vendor || ingredient.vendor;
-    ingredient.supplyPrice = ingredient.supplyPrice || normalizePriceValue(data.product.price);
+    if (isMeaningfulValue(data.product.title)) {
+      ingredient.name = data.product.title;
+    }
+    if (isMeaningfulValue(data.product.vendor)) {
+      ingredient.vendor = data.product.vendor;
+    }
+    if (isMeaningfulValue(data.product.price)) {
+      ingredient.supplyPrice = normalizePriceValue(data.product.price);
+    }
     extractStatus = {
       tone: "success",
       message: `${ingredient.name || "품목"} 분석 완료 · 공급처 ${ingredient.vendor || "미확인"}${
-        ingredient.supplyPrice ? ` · 가격 ${ingredient.supplyPrice}` : ""
+        ingredient.supplyPrice ? ` · 가격 ${ingredient.supplyPrice}원` : ""
       }`,
     };
     render();
@@ -941,6 +947,10 @@ function normalizePriceValue(value) {
   return String(value ?? "")
     .replace(/[^\d.]/g, "")
     .trim();
+}
+
+function isMeaningfulValue(value) {
+  return Boolean(String(value ?? "").trim());
 }
 
 function generateAssistantReply(question) {
