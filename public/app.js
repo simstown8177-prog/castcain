@@ -50,9 +50,6 @@ const defaultState = {
     },
   ],
   stores: createDefaultStores(),
-  inventory: [],
-  alerts: [],
-  sales: [],
   forecast: {
     rent: "1800000",
     management: "250000",
@@ -123,9 +120,6 @@ function hydrateLocalCache() {
       ingredients: parsed.ingredients || structuredClone(defaultState.ingredients),
       menus: parsed.menus || structuredClone(defaultState.menus),
       stores: parsed.stores || structuredClone(defaultState.stores),
-      inventory: parsed.inventory || structuredClone(defaultState.inventory),
-      alerts: parsed.alerts || structuredClone(defaultState.alerts),
-      sales: parsed.sales || structuredClone(defaultState.sales),
       forecast: { ...defaultState.forecast, ...(parsed.forecast || {}) },
     };
   } catch (error) {
@@ -1217,9 +1211,6 @@ async function boot() {
       ingredients: remoteState.ingredients || structuredClone(defaultState.ingredients),
       menus: remoteState.menus || structuredClone(defaultState.menus),
       stores: remoteState.stores || structuredClone(defaultState.stores),
-      inventory: remoteState.inventory || structuredClone(defaultState.inventory),
-      alerts: remoteState.alerts || structuredClone(defaultState.alerts),
-      sales: remoteState.sales || structuredClone(defaultState.sales),
       forecast: { ...defaultState.forecast, ...(remoteState.forecast || {}) },
     };
     activeMenuId = state.menus[0]?.id || null;
